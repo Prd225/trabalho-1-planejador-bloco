@@ -11,10 +11,6 @@
 *.bbl
 *.blg
 
-# Arquivo PDF de saída
-# (É boa prática não versionar o PDF, pois ele é um produto do código, não o código em si)
-*.pdf
-
 # Arquivos de backup de editores
 *.bak
 *~
