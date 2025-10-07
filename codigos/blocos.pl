@@ -5,17 +5,19 @@ bloco(c,2).
 bloco(d,3).
 
 %fatos sobre a mesa
+mesa(0).
 mesa(1).
 mesa(2).
 mesa(3).
 mesa(4).
 mesa(5).
-mesa(6).
+mesa(5).
+mesa_comprimento(7).
 
-%fatos sobre as posicoes dos blocos em S0
+%Situacao 1
 s1_state0([
-		pos(a,mesa(4)),
-		pos(b,mesa(6)),
+		pos(a,mesa(3)),
+		pos(b,mesa(5)),
 		pos(c,mesa(0)),
 		pos(d,on(a)),
 		pos(d,on(b)),
@@ -23,7 +25,6 @@ s1_state0([
 		livre(d)
 ]).
 
-%Situacao 1
 s1_statef1([
 		pos(d, mesa(4)),
 		pos(a, on(d)),
@@ -44,8 +45,8 @@ s1_statef2([
 
 s1_statef3([
 		pos(c, mesa(0)),
-		pos(a, mesa(3)),
-		pos(b, mesa(6)),
+		pos(a, mesa(2)),
+		pos(b, mesa(5)),
 		pos(d, on(c)),
 		pos(d, on(a)),
 		livre(b),
@@ -54,8 +55,8 @@ s1_statef3([
 
 s1_statef4([
 		pos(c, mesa(0)),
-		pos(d, mesa(3)),
-		pos(b, mesa(6)),
+		pos(d, mesa(2)),
+		pos(b, mesa(5)),
 		pos(a, on(c)),
 		livre(a),
 		livre(b),
@@ -65,7 +66,7 @@ s1_statef4([
 %Situacao 2
 s2_state0([
 		pos(c, mesa(0)),
-		pos(d, mesa(4)),
+		pos(d, mesa(3)),
 		pos(a, on(c)),
 		pos(b, on(c)),
 		livre(a),
@@ -73,46 +74,8 @@ s2_state0([
 		livre(d)
 ]).
 
-s2_state1([
-		pos(c, mesa(0)),
-		pos(b, mesa(3)),
-		pos(d, mesa(4)),
-		pos(a, on(c)),
-		livre(a),
-		livre(b),
-		livre(d)
-]).
-
-s2_state2([
-		pos(c, mesa(0)),
-		pos(b, mesa(3)),
-		pos(d, mesa(4)),
-		pos(a, on(b)),
-		livre(c),
-		livre(a),
-		livre(d)
-]).
-
-s2_state3([
-		pos(b, mesa(3)),
-		pos(d, mesa(4)),
-		pos(a, on(b)),
-		pos(c, on(d)),
-		livre(a),
-		livre(c)
-]).
-
-s2_state4([
-		pos(b, mesa(3)),
-		pos(d, mesa(4)),
-		pos(c, on(d)),
-		pos(a, on(c)),
-		livre(b),
-		livre(a)
-]).
-
-s2_state5([
-		pos(d, mesa(4)),
+s2_statef([
+		pos(d, mesa(3)),
 		pos(c, on(d)),
 		pos(a, on(c)),
 		pos(b, on(c)),
@@ -122,80 +85,71 @@ s2_state5([
 
 %Situacao 3
 s3_state0([
-        pos(a,mesa(4)),
-        pos(b,mesa(6)),
-        pos(c,mesa(0)),
-        pos(d,on(a)),
-        pos(d,on(b)),
-        livre(c),
-        livre(d)
+		pos(a,mesa(3)),
+		pos(b,mesa(5)),
+		pos(c,mesa(0)),
+		pos(d,on(a)),
+		pos(d,on(b)),
+		livre(c),
+		livre(d)
 ]).
 
-s3_state1([
-        pos(a,mesa(4)),
-        pos(b,mesa(6)),
-        pos(c,mesa(0)),
-        pos(d,on(c)),
-        livre(d),
-        livre(a),
-		livre(b)
-]).
-
-s3_state2([
-		pos(a, on(b)),
-		pos(b,mesa(6)),
-        pos(c,mesa(0)),
-        pos(d,on(c)),
-		livre(d),
-		livre(a)
-]).
-
-s3_state3([
+s3_statef([
 		pos(c, mesa(0)),
 		pos(d, mesa(3)),
-		pos(b, mesa(6)),
-		pos(a, on(b)),
-		livre(c),
-		livre(d),
-		livre(a)
-]).
-
-s3_state4([
-        pos(c, mesa(0)),
-        pos(d, mesa(3)),
-        pos(b, mesa(6)),
-        pos(a, on(c)),
+		pos(a, on(c)),
+		pos(b, on(c)),
 		livre(a),
 		livre(b),
 		livre(d)
 ]).
 
-s3_state5([
-        pos(c, mesa(0)),
-        pos(d, mesa(4)),
-        pos(a, on(c)),
-        pos(b, on(c)),
-        livre(a),
-        livre(b),
-        livre(d)
-]).
+%Pre-condicoes
+absolute_pos(Bloco, State, X) :- 
+    member(pos(Bloco, mesa(X)), State).
 
-s3_state6([
-    	pos(c, mesa(0)),
-        pos(d, mesa(4)),
-        pos(a, on(c)),
-        pos(b, on(c)),
-        livre(a),
-        livre(b),
-        livre(d)
-]).
+absolute_pos(Bloco, State, X) :-
+    member(pos(Bloco, on(BlocoAlvo, Offset)), State),
+    absolute_pos(BlocoAlvo, State, X_Alvo),
+    X is X_Alvo + Offset.
 
-s3_state7([
-        pos(c, mesa(0)),
-        pos(d, mesa(5)),
-        pos(a, on(c)),
-        pos(b, on(c)),
-        livre(a),
-        livre(b),
-        livre(d)
-]).
+busy_slots(Bloco, State, Slots) :-
+    absolute_pos(Bloco, State, X),
+    bloco(Bloco, W),
+    X_end is X + W - 1,
+    findall(S, between(X, X_end, S), Slots).
+
+is_free(Slot, State) :-
+    forall(Bloco(B, X),
+           (\+ (member(pos(B, _), State),
+                busy_slots(B, State, BusySlots),
+                member(Slot, BusySlots)))).
+
+can(move(Bloco, mesa(X))) :-
+		bloco(Bloco, tamanho),
+		mesa_comprimento(W),
+    	X_end is X + W - 1,
+		X_end < W,
+	    findall(S, between(X, X_end, S), RequiredSlots),
+		forall(member(Slot, RequiredSlots), is_free(Slot, State)).
+
+estabilidade(Bloco, BlocoAlvo, Offset) :-
+		bloco(Bloco, tamanho1),
+		bloco(Bloco, tamanho2),
+		diferenca is tamanho1 - tamanho2,
+		diferenca is <= 1. %1 de diferenca e o limite
+
+can(move(Bloco, on(BlocoAlvo, Offset))) :-
+		livre(Bloco),
+		livre(BlocoAlvo),
+		Bloco \= BlocoAlvo,
+		estabilidade(Bloco, BlocoAlvo, Offset).
+
+%Add-list
+
+
+%Delete-list
+
+
+%Pergunta para solucionar (substituir X pelo numero da situacao):
+%sX_state0(S0), sX_statef(G), plan(S0, G, Plano).
