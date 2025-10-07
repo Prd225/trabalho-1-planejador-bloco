@@ -1,0 +1,16 @@
+# Arquivos de Log e Auxiliares do LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# Arquivos gerados pela Bibliografia (BibTeX)
+*.bbl
+*.blg
+
+# Arquivos de backup de editores
+*.bak
+*~
