@@ -105,6 +105,10 @@ s3_statef([
 ]).
 
 %Pre-condicoes
+member(X,[X|_]).
+member(X,[_|T]):-
+     member(X,T).
+
 absolute_pos(Bloco, State, X) :- 
     member(pos(Bloco, mesa(X)), State).
 
