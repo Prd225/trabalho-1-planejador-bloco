@@ -120,36 +120,91 @@ busy_slots(Bloco, State, Slots) :-
     findall(S, between(X, X_end, S), Slots).
 
 is_free(Slot, State) :-
-    forall(Bloco(B, X),
+    forall(bloco(B, _),
            (\+ (member(pos(B, _), State),
                 busy_slots(B, State, BusySlots),
                 member(Slot, BusySlots)))).
 
-can(move(Bloco, mesa(X))) :-
+estabilidade(Bloco, _, _) :-
+		bloco(Bloco, W1),
+		bloco(Bloco, W2),
+		Diferenca is W1 - W2,
+		Diferenca < 2. %1 de diferenca e o limite
+
+can(move(Bloco, mesa(X)), [
 		bloco(Bloco, tamanho),
 		mesa_comprimento(W),
     	X_end is X + W - 1,
 		X_end < W,
 	    findall(S, between(X, X_end, S), RequiredSlots),
-		forall(member(Slot, RequiredSlots), is_free(Slot, State)).
+		forall(member(Slot, RequiredSlots), is_free(Slot, _))
+]).
 
-estabilidade(Bloco, BlocoAlvo, Offset) :-
-		bloco(Bloco, tamanho1),
-		bloco(Bloco, tamanho2),
-		diferenca is tamanho1 - tamanho2,
-		diferenca is <= 1. %1 de diferenca e o limite
-
-can(move(Bloco, on(BlocoAlvo, Offset))) :-
+can(move(Bloco, on(BlocoAlvo, Offset)), [
 		livre(Bloco),
 		livre(BlocoAlvo),
 		Bloco \= BlocoAlvo,
-		estabilidade(Bloco, BlocoAlvo, Offset).
+		estabilidade(Bloco, BlocoAlvo, Offset)
+]).
 
 %Add-list
+append([], L, L).
+append([H|T], L, [H|R]) :- append(T, L, R).
 
+apply(State, move(Bloco, X), NewState) :-
+		member(pos(Bloco, PosAntiga), State),
+		
+		build_delete_list(move(Bloco, X), PosAntiga, DelList),
+		delete_all(State, DelList, StateAfterDeletes),
+
+		build_add_list(move(Bloco, X), PosAntiga, AddList),
+		append(AddList, StateAfterDeletes, NewState).
 
 %Delete-list
 
+build_delete_list(move(Bloco, on(TargetBloco, _)), PosAntiga, [pos(Bloco, PosAntiga), livre(TargetBloco)]).
+build_delete_list(move(Bloco, table(_)), PosAntiga, [pos(Bloco, PosAntiga)]).
+
+build_add_list(move(Bloco, X), on(AlvoAntigo), [pos(Bloco, X), livre(Bloco), livre(AlvoAntigo)]).
+build_add_list(move(Bloco, X), table(_), [pos(Bloco, X), livre(Bloco)]).
+
+delete_all([], _, []).
+delete_all([H|T], L2, R) :- member(H, L2), !, delete_all(T, L2, R).
+delete_all([H|T], L2, [H|R]) :- delete_all(T, L2, R).
+
+%O Plano
+satizfaz(State, Metas) :-
+    	subset(Metas, State).
+
+select_goal(State, Metas, Meta) :-
+		member(Meta, Metas),
+		\+ member(Meta, State).
+
+adds(move(Bloco, Alvo), [
+	pos(Bloco, Alvo),
+	livre(Bloco)
+]).
+
+achieves(Action, Meta) :-
+		adds(Action, AddList),
+		member(Meta, AddList).
+
+possivel(State, Action) :-
+		can(Action, Precondicoes),
+		forall(member(P, Precondicoes), (member(P, State), possivel(State, P))).
+
+plan(State, Metas, []) :-
+		satizfaz(State, Metas).
+plan(State, Metas, Plano) :-
+		append(PrePlan, [Action], Plano),
+		select_goal(State, Metas, Meta),
+		achieves(Action, Meta),
+		can(Action, Precondicoes),
+		plan(State, Precondicoes, PrePlan),
+		apply(State, PrePlan, MidState),
+		possivel(Action, MidState),
+		apply(MidState, [Action], FState),
+		satizfaz(FState, Metas).
 
 %Pergunta para solucionar (substituir X pelo numero da situacao):
 %sX_state0(S0), sX_statef(G), plan(S0, G, Plano).
